@@ -26,6 +26,7 @@
 #define SVERSION 0x05
 #define METHOD_NOAUTH 0x00
 #define METHOD_UNACCEPTABLE 0xff
+#define METHOD_PASSWD 0x02
 
 // see also: https://www.ietf.org/rfc/rfc1928.txt
 #define SOCKS5_CMD_CONNECT 0x01
@@ -72,4 +73,16 @@ struct socks5_response {
     unsigned char atyp;
 } __attribute__((packed, aligned(1)));
 
+struct verify_request {
+    unsigned char ver;
+    unsigned char ulen;
+    unsigned char uname[0];
+    unsigned char plen;
+    unsigned char pname[0];
+} __attribute__((packed, aligned(1)));
+
+struct verify_response {
+    unsigned char ver;
+    unsigned char status;
+} __attribute__((packed, aligned(1)));
 #endif // _SOCKS5_H

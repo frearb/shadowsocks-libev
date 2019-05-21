@@ -896,8 +896,8 @@ server_recv_cb(EV_P_ ev_io *w, int revents)
             response.ver    = SVERSION;
             response.method = METHOD_UNACCEPTABLE;
             for (int i = 0; i < method->nmethods; i++)
-                if (method->methods[i] == METHOD_NOAUTH) {
-                    response.method = METHOD_NOAUTH;
+                if (method->methods[i] == METHOD_PASSWD) {
+                    response.method = METHOD_PASSWD;
                     break;
                 }
             char *send_buf = (char *)&response;
@@ -907,6 +907,25 @@ server_recv_cb(EV_P_ ev_io *w, int revents)
                 close_and_free_server(EV_A_ server);
                 return;
             }
+
+            //varify
+            if (buf->len < sizeof(struct verify_request)) {
+                return;
+            }
+            struct verify_request *verify = (struct verify_request *)buf->data;
+            int verify_len                       = verify->username + verify.password + sizeof(struct method_select_request);
+            if (buf->len < verify_len) {
+                return;
+            }
+
+            struct verify_response response;
+            response.ver    = SVERSION;
+            // do something to verify user&passwd
+            response.status = 0x01;
+            
+            char *send_buf = (char *)&response;
+            send(server->fd, send_buf, sizeof(response), 0);
+            
 
             server->stage = STAGE_HANDSHAKE;
 
