@@ -76,9 +76,9 @@ struct socks5_response {
 struct verify_request {
     unsigned char ver;
     unsigned char ulen;
-    unsigned char uname[0];
+    char * uname;
     unsigned char plen;
-    unsigned char pname[0];
+    char * passwd;
 } __attribute__((packed, aligned(1)));
 
 struct verify_response {

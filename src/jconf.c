@@ -247,6 +247,10 @@ read_jconf(const char *file)
                 conf.local_addr_v6 = to_string(value);
             } else if (strcmp(name, "local_port") == 0) {
                 conf.local_port = to_string(value);
+            } else if (strcmp(name, "local_uname") == 0) {
+                conf.local_uname = to_string(value);
+            } else if (strcmp(name, "local_pswd") == 0) {
+                conf.local_pswd = to_string(value);
             } else if (strcmp(name, "password") == 0) {
                 conf.password = to_string(value);
             } else if (strcmp(name, "key") == 0) {

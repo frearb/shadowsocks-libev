@@ -81,7 +81,8 @@
 
 int verbose    = 0;
 int reuse_port = 0;
-
+char *local_uname = NULL;
+char *local_pswd =NULL;
 #ifdef __ANDROID__
 int vpn        = 0;
 uint64_t tx    = 0;
@@ -907,34 +908,63 @@ server_recv_cb(EV_P_ ev_io *w, int revents)
                 close_and_free_server(EV_A_ server);
                 return;
             }
-
-            //varify
-            if (buf->len < sizeof(struct verify_request)) {
-                return;
-            }
-            struct verify_request *verify = (struct verify_request *)buf->data;
-            int verify_len                       = verify->username + verify.password + sizeof(struct method_select_request);
-            if (buf->len < verify_len) {
-                return;
-            }
-
-            struct verify_response response;
-            response.ver    = SVERSION;
-            // do something to verify user&passwd
-            response.status = 0x01;
-            
-            char *send_buf = (char *)&response;
-            send(server->fd, send_buf, sizeof(response), 0);
-            
-
-            server->stage = STAGE_HANDSHAKE;
-
+            server->stage = STAGE_VERIFY;
+            //clear buf
             if (method_len < (int)(buf->len)) {
                 memmove(buf->data, buf->data + method_len, buf->len - method_len);
                 buf->len -= method_len;
                 continue;
             }
+            buf->len = 0;
+            return;
+        }
+        else if (server->stage == STAGE_VERIFY) {
+            if (buf->len < 1)
+                return;
+            if (buf->data[0] != 0x01) {
+                close_and_free_remote(EV_A_ remote);
+                close_and_free_server(EV_A_ server);
+                return;
+            }
+            struct verify_request verify;
+            verify.ver = buf->data[0];
+            verify.ulen = buf->data[1];
+            verify.uname = (char*)malloc((verify.ulen+1)*sizeof(char));
+            verify.plen = buf->data[2+verify.ulen];
+            verify.passwd = (char*)malloc((verify.plen+1)*sizeof(char));
+            verify.passwd = &buf->data[3+verify.ulen];
+            for(int i=0;i<verify.ulen;i++){
+                verify.uname[i]=buf->data[2+i];
+            }
+            verify.uname[verify.ulen]='\0';
+            for(int i=0;i<verify.plen;i++){
+                verify.passwd[i]=buf->data[3+verify.ulen+i];
+            }
+            verify.passwd[verify.plen]='\0';
+            int verify_len = verify.ulen + verify.plen + 3;
+            if (buf->len < verify_len) {
+                return;
+            }
+            struct verify_response response2;
+            response2.ver    = SVERSION;
+            printf("local_uname:%s,local_pswd:%s\n",local_uname,local_pswd);
+            printf("verify_uname:%s,verify_pswd:%s\n",verify.uname,verify.passwd);
+            if(strcmp(local_uname, verify.uname) == 0 && strcmp(local_pswd,verify.passwd) == 0){
+                response2.status = 0x00;
+            }
+            else{
+                response2.status = 0x01;
+            }
+            char *send_buf2 = (char *)&response2;
+            send(server->fd, send_buf2, sizeof(response2), 0);
+            
 
+            server->stage = STAGE_HANDSHAKE;
+            if (verify_len < (int)(buf->len)) {
+                memmove(buf->data, buf->data + verify_len, buf->len - verify_len);
+                buf->len -= verify_len;
+                continue;
+            }
             buf->len = 0;
             return;
         } else if (server->stage == STAGE_HANDSHAKE ||
@@ -1650,6 +1680,12 @@ main(int argc, char **argv)
         }
         if (local_port == NULL) {
             local_port = conf->local_port;
+        }
+        if (local_uname == NULL) {
+            local_uname = conf->local_uname;
+        }
+        if (local_pswd == NULL) {
+            local_pswd = conf->local_pswd;
         }
         if (password == NULL) {
             password = conf->password;
