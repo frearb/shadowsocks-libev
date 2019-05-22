@@ -947,8 +947,6 @@ server_recv_cb(EV_P_ ev_io *w, int revents)
             }
             struct verify_response response2;
             response2.ver    = SVERSION;
-            printf("local_uname:%s,local_pswd:%s\n",local_uname,local_pswd);
-            printf("verify_uname:%s,verify_pswd:%s\n",verify.uname,verify.passwd);
             if(strcmp(local_uname, verify.uname) == 0 && strcmp(local_pswd,verify.passwd) == 0){
                 response2.status = 0x00;
             }
